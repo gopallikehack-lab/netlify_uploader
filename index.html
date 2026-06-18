@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drive → HF Uploader</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0d1117; color: #c9d1d9; font-family: system-ui, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: #161b22; border: 1px solid #30363d; border-radius: 24px; padding: 50px 40px; max-width: 600px; width: 100%; }
+        .logo { text-align: center; margin-bottom: 30px; }
+        .logo h1 { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #58a6ff, #1f6feb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo p { color: #8b949e; font-size: 14px; }
+        .input-group { display: flex; flex-direction: column; gap: 15px; margin: 30px 0; }
+        .input-group input { padding: 15px; border-radius: 12px; border: 1px solid #30363d; background: #0d1117; color: #c9d1d9; font-size: 16px; }
+        .btn-upload { padding: 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, #238636, #2ea043); color: white; font-size: 18px; font-weight: 600; cursor: pointer; }
+        .btn-upload:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status { margin-top: 25px; padding: 15px; border-radius: 12px; display: none; font-size: 14px; line-height: 1.6; }
+        .status.loading { display: block; background: #1c2333; border: 1px solid #30363d; color: #58a6ff; }
+        .status.success { display: block; background: #0f2d16; border: 1px solid #238636; color: #3fb950; }
+        .status.error { display: block; background: #2d0f0f; border: 1px solid #da3633; color: #f85149; }
+        .status a { color: #58a6ff; word-break: break-all; }
+        .footer { margin-top: 25px; text-align: center; font-size: 13px; color: #484f58; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo"><h1>🚀 Drive → HF</h1><p>Upload Google Drive files to Hugging Face</p></div>
+    <div class="input-group">
+        <input type="text" id="driveLink" placeholder="https://drive.google.com/file/d/xxxxx/view" />
+        <button class="btn-upload" id="uploadBtn">📤 Upload to HF</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="footer">Made with ❤️ by <span style="color:#58a6ff;">Gopal Parmar</span></div>
+</div>
+<script>
+document.getElementById('uploadBtn').addEventListener('click', async function() {
+    const url = document.getElementById('driveLink').value.trim();
+    const status = document.getElementById('status');
+    if (!url) { status.className = 'status error'; status.textContent = '❌ Enter a link.'; status.style.display = 'block'; return; }
+    this.disabled = true; this.textContent = '⏳ Uploading...';
+    status.className = 'status loading'; status.textContent = '⏳ Processing...'; status.style.display = 'block';
+    try {
+        const res = await fetch('/.netlify/functions/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.success) {
+            status.className = 'status success';
+            status.innerHTML = `✅ <strong>Uploaded!</strong><br>📁 ${data.filename}<br>📏 ${(data.size/1024/1024).toFixed(2)} MB<br>🔗 <a href="${data.link}" target="_blank">${data.link}</a>`;
+        } else {
+            status.className = 'status error';
+            status.textContent = '❌ ' + (data.error || 'Upload failed.');
+        }
+    } catch(e) {
+        status.className = 'status error';
+        status.textContent = '❌ ' + e.message;
+    }
+    this.disabled = false; this.textContent = '📤 Upload to HF';
+});
+</script>
+</body>
+</html>
